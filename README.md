@@ -2,7 +2,7 @@
 
 Crypto spot bot built on [Freqtrade](https://github.com/freqtrade/freqtrade) + CCXT.
 
-**Defaults:** Binance spot · `XRP/USDT` + `SOL/USDT` · `1h` · **dry-run** · strategy `EmaRsiV2Strategy`
+**Defaults:** Binance spot · `BTC/USDT` + `ETH/USDT` + `XRP/USDT` + `SOL/USDT` · `1h` · **dry-run** · strategy `FreqaiSpotStrategy` (FreqAI / LightGBM)
 
 This repo does **not** guarantee profit. You must pass the gates below before live trading.
 
@@ -14,6 +14,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip wheel
 python -m pip install -e .
+python -m pip install -r requirements-freqai.txt
 freqtrade install-ui
 Copy-Item user_data\config.example.json user_data\config.json
 # Edit user_data\config.json (API password, optional exchange keys)
@@ -25,19 +26,21 @@ freqtrade --version
 ### Download history
 
 ```powershell
-freqtrade download-data --config user_data/config.json --exchange binance --pairs XRP/USDT SOL/USDT --timeframes 1h 4h --timerange 20250101- --userdir user_data
+freqtrade download-data --config user_data/config.json --exchange binance --pairs BTC/USDT ETH/USDT XRP/USDT SOL/USDT --timeframes 1h 4h --timerange 20250101- --userdir user_data
 ```
 
-### Backtest
+### Train / backtest (FreqAI)
 
 ```powershell
-freqtrade backtesting --config user_data/config.json --strategy EmaRsiV2Strategy --userdir user_data --timerange 20250101-
+freqtrade backtesting --config user_data/config.json --strategy FreqaiSpotStrategy --freqaimodel LightGBMRegressor --timerange 20250901- --userdir user_data
 ```
 
-### Dry-run (paper trade)
+Models are written under `user_data/models/43industries-spot-v1/`.
+
+### Dry-run (paper trade with live retrain)
 
 ```powershell
-freqtrade trade --config user_data/config.json --strategy EmaRsiV2Strategy --userdir user_data
+freqtrade trade --config user_data/config.json --strategy FreqaiSpotStrategy --freqaimodel LightGBMRegressor --userdir user_data
 ```
 
 Stop with `Ctrl+C`. Keep `dry_run: true` in `user_data/config.json` until gates pass.
@@ -70,24 +73,26 @@ Set `telegram.enabled`, `token`, and `chat_id` in config.
 
 If a gate fails: change strategy parameters, change strategy, or do not go live.
 
-### Latest backtest (`EmaRsiV2Strategy`, XRP+SOL 1h+4h filter, 2025-01 → 2025-11)
+### Latest FreqAI backtest (`FreqaiSpotStrategy` + LightGBM, Sep–Nov 2025)
 
-| Metric | V2 result | V1 (for compare) | Gate |
-|--------|-----------|------------------|------|
-| Trades | 10 (SOL 8 / XRP 2) | 177 | **Fail** (sample thin) |
-| Total profit | **-0.41%** (-4.1 USDT) | -3.94% | **Fail** (expectancy) |
-| Profit factor | 0.59 | 0.73 | **Fail** (< 1) |
-| Max drawdown | 0.55% | 4.29% | Pass (≤ 20%) |
-| Per pair | XRP **+0.35%** · SOL -0.76% | SOL -0.71% · XRP -3.23% | — |
-| Exit notes | exit_signal still 5 losers; ROI/trail profitable | exit_signal dominated losses | — |
+| Metric | Result | Gate |
+|--------|--------|------|
+| Trades | 78 (win rate 74.4%) | Pass (sample OK) |
+| Total profit | **-0.13%** (-1.3 USDT) | **Fail** (expectancy) |
+| Profit factor | 0.98 | **Fail** (< 1) |
+| Per pair | XRP +0.46% · BTC +0.31% · SOL +0.03% · ETH **-0.92%** | — |
+| Models | ~100 rolling trains under `user_data/models/43industries-spot-v1/` | — |
 
-**Verdict: do not go live.** V2 lost less than V1 and XRP turned slightly positive, but expectancy and sample size still fail. Next: hyperopt EMA/RSI/trail params, or refine exits further.
+**Verdict: do not go live.** FreqAI is enabled and trained; still slightly negative after fees. Keep dry-run; next tune features/thresholds or drop weak pairs.
 
-### Brain V2 rules (active)
+### Active brain (FreqAI)
 
-- Entry: 4h EMA uptrend + 1h EMA cross up + RSI 40–55 + volume > SMA20
-- Exit: 1h EMA cross down only (no RSI exit) + trailing stop (+1.5% offset, 1% trail) + ROI + -6% stop
-- Baseline V1 kept at `EmaRsiStrategy.py`
+- Strategy: `FreqaiSpotStrategy` — predicts mean forward return (`&-s_close`)
+- Model: `LightGBMRegressor`, retrain every 24h in dry/live
+- Features: RSI/MFI/ADX/SMA/EMA/BB/ROC/volume on 1h+4h, with BTC/ETH correlation features
+- Entry: `do_predict==1` and predicted return > 1%
+- Exit: predicted return < 0, plus ROI / -6% stop
+- Rule baselines kept: `EmaRsiStrategy.py`, `EmaRsiV2Strategy.py`
 
 ## Live checklist (later)
 
@@ -108,6 +113,9 @@ trading bot/
     user_data/
       config.json
       strategies/
-        EmaRsiStrategy.py      # V1 baseline
-        EmaRsiV2Strategy.py    # active brain
+        FreqaiSpotStrategy.py  # active FreqAI brain
+        EmaRsiV2Strategy.py
+        EmaRsiStrategy.py
+      models/                  # trained FreqAI models (local, gitignored)
 ```
+
