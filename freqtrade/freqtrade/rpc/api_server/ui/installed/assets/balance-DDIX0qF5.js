@@ -1,0 +1,2 @@
+import{mt as e,v as t}from"./runtime-core.esm-bundler-DZo3dYLJ.js";import{F as n}from"./index-CqFyOUQX.js";import{t as r}from"./BotBalance-BetHNkLd.js";var i={};function a(n,i){let a=r;return e(),t(a)}var o=n(i,[[`render`,a]]);export{o as default};
+//# sourceMappingURL=balance-DDIX0qF5.js.map

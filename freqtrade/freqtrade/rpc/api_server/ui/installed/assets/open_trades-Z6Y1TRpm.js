@@ -1,0 +1,2 @@
+import{mt as e,v as t}from"./runtime-core.esm-bundler-DZo3dYLJ.js";import{F as n}from"./index-CqFyOUQX.js";import{t as r}from"./MobileTradesList-Bu792xpQ.js";var i={};function a(n,i){let a=r;return e(),t(a)}var o=n(i,[[`render`,a]]);export{o as default};
+//# sourceMappingURL=open_trades-Z6Y1TRpm.js.map

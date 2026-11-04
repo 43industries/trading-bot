@@ -1,0 +1,2 @@
+import{On as e,et as t,k as n,mt as r,qt as i,v as a,xt as o}from"./runtime-core.esm-bundler-DZo3dYLJ.js";import{b as s}from"./Button-CRyEKUsP.js";import{t as c}from"./useForwardExpose-DDeemiIb.js";var l=n({__name:`Label`,props:{for:{type:String,required:!1},asChild:{type:Boolean,required:!1},as:{type:null,required:!1,default:`label`}},setup(n){let l=n;return c(),(n,c)=>(r(),a(e(s),t(l,{onMousedown:c[0]||=e=>{!e.defaultPrevented&&e.detail>1&&e.preventDefault()}}),{default:i(()=>[o(n.$slots,`default`)]),_:3},16))}});export{l as t};
+//# sourceMappingURL=Label-BVDIYnkJ.js.map

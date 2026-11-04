@@ -1,0 +1,2 @@
+import{p as e}from"./usePortal-Bvp49Zdb.js";import{g as t,vn as n}from"./runtime-core.esm-bundler-DZo3dYLJ.js";function r(r){let i=e({locale:n(`en`)});return t(()=>r?.value||i.locale?.value||`en`)}export{r as t};
+//# sourceMappingURL=useLocale-Tsdz0Ihi.js.map

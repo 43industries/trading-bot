@@ -1,0 +1,2 @@
+import{D as e,b as t,k as n,mt as r,qt as i}from"./runtime-core.esm-bundler-DZo3dYLJ.js";import{d as a}from"./index-CqFyOUQX.js";import{t as o}from"./DraggableContainer-CtvVFAOf.js";var s={class:`max-w-xl mx-auto p-4 my-5`},c=n({__name:`login`,setup(n){return(n,c)=>{let l=a,u=o;return r(),t(`div`,s,[e(u,{header:`43_industries bot Login`,class:`px-4 py-2`},{default:i(()=>[e(l)]),_:1})])}}});export{c as default};
+//# sourceMappingURL=login-pYPjAoCJ.js.map
