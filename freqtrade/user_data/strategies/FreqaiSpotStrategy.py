@@ -5,7 +5,7 @@ import talib.abstract as ta
 from pandas import DataFrame
 from technical import qtpylib
 
-from freqtrade.strategy import IStrategy
+from freqtrade.strategy import IStrategy, informative
 
 
 logger = logging.getLogger(__name__)
@@ -13,13 +13,17 @@ logger = logging.getLogger(__name__)
 
 class FreqaiSpotStrategy(IStrategy):
     """
-    Spot-only FreqAI strategy for BTC/ETH/XRP/SOL.
-    Model predicts mean forward return; long when prediction is sufficiently positive.
+    Spot FreqAI strategy (brain+risk v2).
+    LightGBM predicts forward mean return; long only with 4h EMA uptrend filter.
     """
 
     minimal_roi = {"0": 0.04, "60": 0.02, "120": 0.01}
     stoploss = -0.06
-    trailing_stop = False
+
+    trailing_stop = True
+    trailing_stop_positive = 0.01
+    trailing_stop_positive_offset = 0.015
+    trailing_only_offset_is_reached = True
 
     timeframe = "1h"
     process_only_new_candles = True
@@ -28,12 +32,43 @@ class FreqaiSpotStrategy(IStrategy):
     startup_candle_count: int = 40
 
     plot_config = {
-        "main_plot": {},
+        "main_plot": {
+            "ema_fast_4h": {"color": "blue"},
+            "ema_slow_4h": {"color": "orange"},
+        },
         "subplots": {
             "&-s_close": {"&-s_close": {"color": "blue"}},
             "do_predict": {"do_predict": {"color": "brown"}},
         },
     }
+
+    @property
+    def protections(self):
+        return [
+            {
+                "method": "StoplossGuard",
+                "lookback_period_candles": 24,
+                "trade_limit": 3,
+                "stop_duration_candles": 4,
+                "required_profit": 0.0,
+                "only_per_pair": False,
+                "only_per_side": False,
+            },
+            {
+                "method": "MaxDrawdown",
+                "calculation_mode": "equity",
+                "lookback_period_candles": 48,
+                "trade_limit": 1,
+                "stop_duration_candles": 12,
+                "max_allowed_drawdown": 0.10,
+            },
+        ]
+
+    @informative("4h")
+    def populate_indicators_4h(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        dataframe["ema_fast"] = ta.EMA(dataframe, timeperiod=12)
+        dataframe["ema_slow"] = ta.EMA(dataframe, timeperiod=26)
+        return dataframe
 
     def feature_engineering_expand_all(
         self, dataframe: DataFrame, period: int, metadata: dict, **kwargs
@@ -91,17 +126,21 @@ class FreqaiSpotStrategy(IStrategy):
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
         enter_long_conditions = [
             df["do_predict"] == 1,
-            df["&-s_close"] > 0.01,
+            df["&-s_close"] > 0.015,
+            df["ema_fast_4h"] > df["ema_slow_4h"],
         ]
         if enter_long_conditions:
             df.loc[
                 reduce(lambda x, y: x & y, enter_long_conditions),
                 ["enter_long", "enter_tag"],
-            ] = (1, "freqai_long")
+            ] = (1, "freqai_long_v2")
         return df
 
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-        exit_long_conditions = [df["do_predict"] == 1, df["&-s_close"] < 0]
+        exit_long_conditions = [
+            df["do_predict"] == 1,
+            df["&-s_close"] < -0.005,
+        ]
         if exit_long_conditions:
             df.loc[reduce(lambda x, y: x & y, exit_long_conditions), "exit_long"] = 1
         return df
