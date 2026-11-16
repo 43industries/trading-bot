@@ -134,7 +134,7 @@ class FreqaiSpotClassifierStrategy(IStrategy):
             df.loc[
                 reduce(lambda x, y: x & y, enter_long_conditions),
                 ["enter_long", "enter_tag"],
-            ] = (1, "freqai_clf_up")
+            ] = (1, "Long clf up+4h")
         return df
 
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:

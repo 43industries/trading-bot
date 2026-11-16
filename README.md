@@ -6,7 +6,28 @@ Crypto spot bot built on [Freqtrade](https://github.com/freqtrade/freqtrade) + C
 
 This repo does **not** guarantee profit. You must pass the gates below before live trading.
 
-## Setup
+## Daily use
+
+From the repo root (`trading bot/`):
+
+```powershell
+.\start-bot.ps1    # dry-run + open FreqUI
+.\status.ps1       # running? PID? recent heartbeats
+.\stop-bot.ps1     # stop the bot
+```
+
+With the bot running, open **http://127.0.0.1:8080/** (also opened by `start-bot.ps1`).
+
+- Bot name: `43_industries bot`
+- Username / password: set under `api_server` in `freqtrade/user_data/config.json` (see `config.example.json`; change `CHANGE_ME` before use)
+
+Keep `"dry_run": true` until profitability gates pass.
+
+### Telegram (optional)
+
+In `freqtrade/user_data/config.json`, set `telegram.enabled` to `true`, fill `token` and `chat_id`, then restart with `.\stop-bot.ps1` / `.\start-bot.ps1`. Alerts for entries, exits, and errors will go to Telegram.
+
+## Setup (first time)
 
 ```powershell
 cd freqtrade
@@ -19,13 +40,17 @@ freqtrade install-ui
 Copy-Item user_data\config.example.json user_data\config.json
 # Edit user_data\config.json (API password, optional exchange keys)
 freqtrade --version
+cd ..
+.\start-bot.ps1
 ```
 
-## Commands
+## Advanced
 
 ### Download history
 
 ```powershell
+cd freqtrade
+.\.venv\Scripts\Activate.ps1
 freqtrade download-data --config user_data/config.json --exchange binance --pairs BTC/USDT XRP/USDT SOL/USDT --timeframes 1h 4h --timerange 20250101- --userdir user_data
 ```
 
@@ -37,29 +62,11 @@ freqtrade backtesting --config user_data/config.json --strategy FreqaiSpotStrate
 
 Models are written under `user_data/models/43industries-spot-v2/`.
 
-### Dry-run (paper trade with live retrain)
+Manual dry-run (same as `start-bot.ps1`):
 
 ```powershell
 freqtrade trade --config user_data/config.json --strategy FreqaiSpotStrategy --freqaimodel LightGBMRegressor --userdir user_data
 ```
-
-Stop with `Ctrl+C`. Keep `dry_run: true` in `user_data/config.json` until gates pass.
-
-### Web UI (43_industries bot)
-
-Enabled on localhost. With the bot running, open:
-
-**http://127.0.0.1:8080/**
-
-- Bot name: `43_industries bot`
-- Username: `freqtrader`
-- Password: `SuperSecurePassword`
-
-Change those in `user_data/config.json` → `api_server` / `bot_name` before exposing beyond this PC.
-
-### Optional Telegram
-
-Set `telegram.enabled`, `token`, and `chat_id` in config.
 
 ## Profitability gates (must pass before live)
 
@@ -113,6 +120,7 @@ freqtrade backtesting --config user_data/config.json --strategy FreqaiSpotClassi
 - Entry: `do_predict==1`, pred > **1.5%**, and 4h EMA fast > slow
 - Exit: pred < **-0.5%**, trailing after +1.5%, ROI, -6% stop
 - Risk: protections on strategy; whitelist BTC/XRP/SOL only
+- Enter tag in UI: `Long model+4h trend`
 - Alt (not active): `FreqaiSpotClassifierStrategy` + `LightGBMClassifier`
 - Rule baselines kept: `EmaRsiStrategy.py`, `EmaRsiV2Strategy.py`
 
@@ -130,6 +138,9 @@ freqtrade backtesting --config user_data/config.json --strategy FreqaiSpotClassi
 ```
 trading bot/
   README.md
+  start-bot.ps1
+  stop-bot.ps1
+  status.ps1
   .gitignore
   freqtrade/
     user_data/
@@ -141,4 +152,3 @@ trading bot/
         EmaRsiStrategy.py
       models/                  # trained FreqAI models (local, gitignored)
 ```
-
